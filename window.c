@@ -417,11 +417,15 @@ window_set_active_pane(struct window *w, struct window_pane *wp)
 		w->active = TAILQ_PREV(w->active, window_panes, entry);
 		if (w->active == NULL)
 			w->active = TAILQ_LAST(&w->panes, window_panes);
-		if (w->active == wp)
+		if (w->active == wp) {
+			notify_window_active_pane_changed(w, w->active);
 			return (1);
+		}
 	}
 	w->active->active_point = next_active_point++;
 	w->active->flags |= PANE_CHANGED;
+	notify_window_active_pane_changed(w, w->active);
+
 	return (1);
 }
 
@@ -589,6 +593,8 @@ window_lost_pane(struct window *w, struct window_pane *wp)
 			w->active->flags |= PANE_CHANGED;
 	} else if (wp == w->last)
 		w->last = NULL;
+
+	notify_window_active_pane_changed(w, w->active);
 }
 
 void

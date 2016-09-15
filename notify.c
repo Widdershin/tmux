@@ -27,6 +27,7 @@ enum notify_type {
 	NOTIFY_WINDOW_UNLINKED,
 	NOTIFY_WINDOW_LINKED,
 	NOTIFY_WINDOW_RENAMED,
+	NOTIFY_WINDOW_ACTIVE_PANE_CHANGED,
 	NOTIFY_ATTACHED_SESSION_CHANGED,
 	NOTIFY_SESSION_RENAMED,
 	NOTIFY_SESSION_CREATED,
@@ -39,6 +40,7 @@ struct notify_entry {
 	struct client		*client;
 	struct session		*session;
 	struct window		*window;
+	struct window_pane *window_pane;
 
 	TAILQ_ENTRY(notify_entry) entry;
 };
@@ -47,7 +49,7 @@ int	notify_enabled = 1;
 
 void	notify_drain(void);
 void	notify_add(enum notify_type, struct client *, struct session *,
-	    struct window *);
+	    struct window *, struct window_pane *);
 
 void
 notify_enable(void)
@@ -64,7 +66,7 @@ notify_disable(void)
 
 void
 notify_add(enum notify_type type, struct client *c, struct session *s,
-    struct window *w)
+    struct window *w, struct window_pane *wp)
 {
 	struct notify_entry	*ne;
 
@@ -73,6 +75,7 @@ notify_add(enum notify_type type, struct client *c, struct session *s,
 	ne->client = c;
 	ne->session = s;
 	ne->window = w;
+	ne->window_pane = wp;
 	TAILQ_INSERT_TAIL(&notify_queue, ne, entry);
 
 	if (c != NULL)
@@ -104,6 +107,9 @@ notify_drain(void)
 			break;
 		case NOTIFY_WINDOW_RENAMED:
 			control_notify_window_renamed(ne->window);
+			break;
+		case NOTIFY_WINDOW_ACTIVE_PANE_CHANGED:
+			control_notify_window_active_pane_changed(ne->window, ne->window_pane);
 			break;
 		case NOTIFY_ATTACHED_SESSION_CHANGED:
 			control_notify_attached_session_changed(ne->client);
@@ -152,55 +158,63 @@ notify_input(struct window_pane *wp, struct evbuffer *input)
 void
 notify_window_layout_changed(struct window *w)
 {
-	notify_add(NOTIFY_WINDOW_LAYOUT_CHANGED, NULL, NULL, w);
+	notify_add(NOTIFY_WINDOW_LAYOUT_CHANGED, NULL, NULL, w, NULL);
+	notify_drain();
+}
+
+void
+notify_window_active_pane_changed(struct window *w, struct window_pane *wp)
+{
+	notify_add(NOTIFY_WINDOW_ACTIVE_PANE_CHANGED, NULL, NULL, w, wp);
 	notify_drain();
 }
 
 void
 notify_window_unlinked(struct session *s, struct window *w)
 {
-	notify_add(NOTIFY_WINDOW_UNLINKED, NULL, s, w);
+	notify_add(NOTIFY_WINDOW_UNLINKED, NULL, s, w, NULL);
 	notify_drain();
 }
 
 void
 notify_window_linked(struct session *s, struct window *w)
 {
-	notify_add(NOTIFY_WINDOW_LINKED, NULL, s, w);
+	notify_add(NOTIFY_WINDOW_LINKED, NULL, s, w, NULL);
+	notify_add(NOTIFY_WINDOW_ACTIVE_PANE_CHANGED, NULL, s, w, w->active);
 	notify_drain();
 }
 
 void
 notify_window_renamed(struct window *w)
 {
-	notify_add(NOTIFY_WINDOW_RENAMED, NULL, NULL, w);
+	notify_add(NOTIFY_WINDOW_RENAMED, NULL, NULL, w, NULL);
 	notify_drain();
 }
 
 void
 notify_attached_session_changed(struct client *c)
 {
-	notify_add(NOTIFY_ATTACHED_SESSION_CHANGED, c, NULL, NULL);
+	notify_add(NOTIFY_ATTACHED_SESSION_CHANGED, c, NULL, NULL, NULL);
 	notify_drain();
 }
 
 void
 notify_session_renamed(struct session *s)
 {
-	notify_add(NOTIFY_SESSION_RENAMED, NULL, s, NULL);
+	notify_add(NOTIFY_SESSION_RENAMED, NULL, s, NULL, NULL);
 	notify_drain();
 }
 
 void
 notify_session_created(struct session *s)
 {
-	notify_add(NOTIFY_SESSION_CREATED, NULL, s, NULL);
+	notify_add(NOTIFY_SESSION_CREATED, NULL, s, NULL, NULL);
 	notify_drain();
 }
 
 void
 notify_session_closed(struct session *s)
 {
-	notify_add(NOTIFY_SESSION_CLOSED, NULL, s, NULL);
+	notify_add(NOTIFY_SESSION_CLOSED, NULL, s, NULL, NULL);
 	notify_drain();
 }

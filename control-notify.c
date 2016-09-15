@@ -158,6 +158,19 @@ control_notify_window_renamed(struct window *w)
 }
 
 void
+control_notify_window_active_pane_changed(struct window *w, struct window_pane *wp)
+{
+	struct client	*c;
+
+	TAILQ_FOREACH(c, &clients, entry) {
+		if (!CONTROL_SHOULD_NOTIFY_CLIENT(c))
+			continue;
+
+		control_write(c, "%%active-pane-changed @%u %%%u", w->id, wp->id);
+	}
+}
+
+void
 control_notify_attached_session_changed(struct client *c)
 {
 	struct session	*s;
