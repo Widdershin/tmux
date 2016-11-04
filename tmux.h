@@ -911,6 +911,8 @@ struct window_pane {
 	struct event	 modetimer;
 	time_t		 modelast;
 
+	u_int    references;
+
 	TAILQ_ENTRY(window_pane) entry;
 	RB_ENTRY(window_pane) tree_entry;
 };

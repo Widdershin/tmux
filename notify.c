@@ -84,6 +84,8 @@ notify_add(enum notify_type type, struct client *c, struct session *s,
 		s->references++;
 	if (w != NULL)
 		w->references++;
+	if (wp != NULL)
+		wp->references++;
 }
 
 void
